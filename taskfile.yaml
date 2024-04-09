@@ -1,0 +1,32 @@
+version: '3'
+
+env:
+  NAMESPACE: default
+
+vars:
+  ENCODED_CA:
+    sh: cat certs/tls.crt | base64 | tr -d '\n'
+
+tasks:
+  docker-build:
+    cmds:
+      - docker build -t ghcr.io/igresc/validating-admission-webhook-go:latest .
+      - docker push ghcr.io/igresc/validating-admission-webhook-go:latest
+
+  docker-run:
+    deps: [docker-build]
+    watch: true
+    cmds:
+      - docker run -p 8443 -v ./certs/:/etc/certs ghcr.io/igresc/validating-admission-webhook-go:latest
+
+  k8s-up:
+    deps: [docker-build]
+    cmds:
+      - kubectl apply -f k8s/tls-secret.yaml -n $NAMESPACE
+      - kubectl apply -f k8s/deployment.yaml -n $NAMESPACE
+      - sed -e 's@${ENCODED_CA}@'"{{.ENCODED_CA}}"'@g' < k8s/validatingWebhook.yaml | kubectl create -f -
+  
+  cleanup:
+    cmds:
+      - kubectl delete -f k8s/ -n $NAMESPACE
+      - kubectl delete demo-webhook-tls -n $NAMESPACE
