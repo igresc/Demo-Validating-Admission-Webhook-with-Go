@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-go
+spec:
+  selector:
+    matchLabels:
+      app: admission-go
+  template:
+    metadata:
+      labels:
+        app: admission-go
+    spec:
+      containers:
+      - name: admission-go
+        image: validating-webhook:latest
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8000

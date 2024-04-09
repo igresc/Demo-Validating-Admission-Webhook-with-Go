@@ -1,0 +1,23 @@
+---
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: demo-webhook1-certificate
+  namespace: default 
+spec:
+  secretName: demo-webhook1-certificate
+  dnsNames:
+  - demo-webhook.cluster.local
+  issuerRef:
+    name: selfsigned
+
+---
+
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+  namespace: default
+spec:
+  selfSigned: {}
