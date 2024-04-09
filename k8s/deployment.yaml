@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: admission-go
+  namespace: default
 spec:
   selector:
     matchLabels:
@@ -12,11 +13,32 @@ spec:
         app: admission-go
     spec:
       containers:
-      - name: admission-go
-        image: validating-webhook:latest
-        resources:
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
-        ports:
-        - containerPort: 8000
+        - name: admission-go
+          image: ghcr.io/igresc/validating-admission-webhook-go:latest
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: demo-webhook-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admission-go
+  namespace: default
+spec:
+  selector:
+    app: admission-go
+  ports:
+    - port: 443
+      targetPort: 8443
