@@ -1,22 +1,22 @@
-apiVersion: admissionregistration.k8s.io/v1beta1
-kind: ValidatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1 
+kind: ValidatingWebhookConfiguration 
 metadata:
-  name: demo-webhook.cluster.local
+  name: "demo-webhook.cluster.local"
 # annotations:
 #   cert-manager.io/inject-ca-from: default/demo-webhook-ca
 webhooks:
-  - name: demo-webhook.cluster.local
+  - name: "demo-webhook.cluster.local"
     clientConfig:
       service:
-        namespace: default
-        name: demo-webhook-svc
-        path: /validate
+        namespace: "default"
+        name: "demo-webhook-svc"
         port: 443
-      caBundle: "" # Base64 of the CA
-    sideEffects: None
+      caBundle: ${ENCODED_CA} # Base64 of the CA
     rules:
       - operations: ["CREATE"] # which operations you want to match.
         resources: ["pods"]
-        apiVersion: ["v1"]
+        apiVersions: ["v1"]
         apiGroups: [""]
         scope: "Namespaced"
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
