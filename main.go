@@ -10,6 +10,8 @@ import (
 	"os"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
@@ -48,17 +50,35 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Println(admissionReviewRequest)
-
 	// TODO: verify the resource is a pod
-	// TODO: check resource limit is set to allow the creation
 
-	// Generate the minimal response to allow pod creation
+	// Decode pod from the AdmissionReview
+	raw := admissionReviewRequest.Request.Object.Raw
+	pod := corev1.Pod{}
+	_, _, err = deserializer.Decode(raw, nil, &pod)
+	if err != nil {
+		msg := fmt.Sprintf("error decoding pod object: %v", err)
+		logger.Println(msg)
+		w.WriteHeader(500)
+		w.Write([]byte(msg))
+		return
+	}
+
+	// Generate the response to allow pod creation
+	// if the resource limit is set
 	admissionResponse := &admissionv1.AdmissionResponse{}
 	admissionResponse.Allowed = true
-	admissionResponse.UID = admissionReviewRequest.Request.UID
 
+	// TODO: check all containers in the pod not only the first
+	if pod.Spec.Containers[0].Resources.Limits.Memory().Value() <= 0 {
+		// Memory() return 0 if unspecified
+		admissionResponse.Allowed = false
+		admissionResponse.Result = &metav1.Status{Message: "Missing resource memory limit"}
+	}
+
+	// Generate the admissionReview used for the reponse
 	var admissionReviewResponse admissionv1.AdmissionReview
+	admissionResponse.UID = admissionReviewRequest.Request.UID
 	admissionReviewResponse.Response = admissionResponse
 	admissionReviewResponse.SetGroupVersionKind(admissionReviewRequest.GroupVersionKind())
 
@@ -79,8 +99,8 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 // set a usage message.
 func init() {
 
-	flag.StringVar(&tlsKey, "tls-key", "/etc/cert/tls.key", "path to the TLS private key (default: /etc/cert/tls.key)")
-	flag.StringVar(&tlsCert, "tls-cert", "/etc/cert/tls.cert", "path to the TLS certificate (default: /etc/cert/tls.crt)")
+	flag.StringVar(&tlsKey, "tls-key", "/etc/certs/tls.key", "path to the TLS private key (default: /etc/certs/tls.key)")
+	flag.StringVar(&tlsCert, "tls-cert", "/etc/certs/tls.crt", "path to the TLS certificate (default: /etc/certs/tls.crt)")
 	flag.IntVar(&port, "port", 443, "Port for the webhook server")
 	flag.Parse()
 
