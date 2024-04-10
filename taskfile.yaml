@@ -18,7 +18,7 @@ tasks:
     deps: [docker-build]
     watch: true
     cmds:
-      - docker run -p 8443 -v ./certs/:/etc/certs ghcr.io/igresc/validating-admission-webhook-go:latest
+      - docker run -p 8443:8443 -v ./certs/:/etc/certs ghcr.io/igresc/validating-admission-webhook-go:latest
   
   k8s-deploy:
     desc: only creates the yamls in k8s/ does not build the image again
@@ -41,3 +41,8 @@ tasks:
       - kubectl delete -f k8s/ -n $NAMESPACE
       - kubectl delete secret demo-webhook-tls -n $NAMESPACE
     ignore_error: true
+  
+  demo:
+    desc: initiates all the windows to demostrate how the webhook works
+    cmds:
+      - tmux new-session "k9s" \; split-window -h "k9s -c pod"
