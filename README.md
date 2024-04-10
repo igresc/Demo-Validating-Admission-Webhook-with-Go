@@ -24,3 +24,6 @@ sed -e 's@${ENCODED_CA}@'"$ENCODED_CA"'@g' <"k8s/validatingWebhook.yaml" | kubec
 CertManager CA injector as an automated alternative:
 https://cert-manager.io/docs/concepts/ca-injector/
 
+#### ValidatingWebhookConfiguration:
+The service default path is `/`, our server listens to `/validate` on port `443`
+https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#service-reference
