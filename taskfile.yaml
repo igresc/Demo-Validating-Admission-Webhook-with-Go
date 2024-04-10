@@ -18,15 +18,22 @@ tasks:
     watch: true
     cmds:
       - docker run -p 8443 -v ./certs/:/etc/certs ghcr.io/igresc/validating-admission-webhook-go:latest
-
-  k8s-up:
-    deps: [docker-build]
+  
+  k8s-deploy:
     cmds:
       - kubectl apply -f k8s/tls-secret.yaml -n $NAMESPACE
       - kubectl apply -f k8s/deployment.yaml -n $NAMESPACE
       - sed -e 's@${ENCODED_CA}@'"{{.ENCODED_CA}}"'@g' < k8s/validatingWebhook.yaml | kubectl create -f -
+
+  k8s-up:
+    deps: [docker-build]
+    cmds:
+      - task: k8s-cleanup
+        ignore_error: true
+      - task: k8s-deploy
   
-  cleanup:
+  k8s-cleanup:
     cmds:
       - kubectl delete -f k8s/ -n $NAMESPACE
-      - kubectl delete demo-webhook-tls -n $NAMESPACE
+      - kubectl delete secret demo-webhook-tls -n $NAMESPACE
+    ignore_error: true
