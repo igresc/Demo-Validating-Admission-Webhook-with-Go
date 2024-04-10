@@ -42,9 +42,10 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 	_, _, err := deserializer.Decode(body, nil, admissionReviewRequest)
 	if err != nil {
 		msg := fmt.Sprintf("error getting admission review from request: %v", err)
+		logger.Println(msg)
 		w.WriteHeader(400)
 		w.Write([]byte(msg))
-		logger.Fatal(msg)
+		return
 	}
 
 	logger.Println(admissionReviewRequest)
@@ -61,14 +62,14 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 	admissionReviewResponse.Response = admissionResponse
 	admissionReviewResponse.SetGroupVersionKind(admissionReviewRequest.GroupVersionKind())
 
-	resp, _ := json.Marshal(admissionReviewResponse)
-	// if err != nil {
-	// 	msg := fmt.Sprintf("error marshalling response json: %v", err)
-	// 	logger.Printf(msg)
-	// 	w.WriteHeader(500)
-	// 	w.Write([]byte(msg))
-	// 	return
-	// }
+	resp, err := json.Marshal(admissionReviewResponse)
+	if err != nil {
+		msg := fmt.Sprintf("error marshalling response json: %v", err)
+		logger.Printf(msg)
+		w.WriteHeader(500)
+		w.Write([]byte(msg))
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(resp)
