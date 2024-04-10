@@ -6,17 +6,23 @@ metadata:
 #   cert-manager.io/inject-ca-from: default/demo-webhook-ca
 webhooks:
   - name: "demo-webhook.cluster.local"
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn 
+          values: ["kube-system"]
     clientConfig:
       service:
         namespace: "default"
         name: "demo-webhook-svc"
         port: 443
+        path: /validate
       caBundle: ${ENCODED_CA} # Base64 of the CA
     rules:
       - operations: ["CREATE"] # which operations you want to match.
         resources: ["pods"]
         apiVersions: ["v1"]
-        apiGroups: [""]
+        apiGroups: ["*"]
         scope: "Namespaced"
     admissionReviewVersions: ["v1"]
     sideEffects: None
