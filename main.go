@@ -27,7 +27,7 @@ var (
 )
 
 func serveValidate(w http.ResponseWriter, r *http.Request) {
-	logger.Printf("received message on validate")
+	logger.Printf("Received message on validate")
 
 	// Recieve http request and check is not empty
 	var body []byte
@@ -43,7 +43,7 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 	admissionReviewRequest := &admissionv1.AdmissionReview{}
 	_, _, err := deserializer.Decode(body, nil, admissionReviewRequest)
 	if err != nil {
-		msg := fmt.Sprintf("error getting admission review from request: %v", err)
+		msg := fmt.Sprintf("Error getting admission review from request: %v", err)
 		logger.Println(msg)
 		w.WriteHeader(400)
 		w.Write([]byte(msg))
@@ -57,12 +57,14 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 	pod := corev1.Pod{}
 	_, _, err = deserializer.Decode(raw, nil, &pod)
 	if err != nil {
-		msg := fmt.Sprintf("error decoding pod object: %v", err)
+		msg := fmt.Sprintf("Error decoding pod object: %v", err)
 		logger.Println(msg)
 		w.WriteHeader(500)
 		w.Write([]byte(msg))
 		return
 	}
+
+	logger.Println("Pod:", pod.Name)
 
 	// Generate the response to allow pod creation
 	// if the resource limit is set
@@ -71,10 +73,14 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: check all containers in the pod not only the first
 	if pod.Spec.Containers[0].Resources.Limits.Memory().Value() <= 0 {
-		// Memory() return 0 if unspecified
+		logger.Println("pod nod not have memory resorce limits")
+		// Memory() returns 0 if unspecified
 		admissionResponse.Allowed = false
 		admissionResponse.Result = &metav1.Status{Message: "Missing resource memory limit"}
+	} else {
+		logger.Println("Pod allowed since has memory limits")
 	}
+	logger.Println(pod.Spec.Containers[0].Resources.Limits)
 
 	// Generate the admissionReview used for the reponse
 	var admissionReviewResponse admissionv1.AdmissionReview
@@ -84,7 +90,7 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := json.Marshal(admissionReviewResponse)
 	if err != nil {
-		msg := fmt.Sprintf("error marshalling response json: %v", err)
+		msg := fmt.Sprintf("Error marshalling response json: %v", err)
 		logger.Printf(msg)
 		w.WriteHeader(500)
 		w.Write([]byte(msg))
@@ -95,15 +101,12 @@ func serveValidate(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-// Tie the command-line flag to the intervalFlag variable and
-// set a usage message.
+// Tie the command-line flags to the corresponding variables (tlsKey, tlsCert, port)
 func init() {
-
 	flag.StringVar(&tlsKey, "tls-key", "/etc/certs/tls.key", "path to the TLS private key (default: /etc/certs/tls.key)")
 	flag.StringVar(&tlsCert, "tls-cert", "/etc/certs/tls.crt", "path to the TLS certificate (default: /etc/certs/tls.crt)")
 	flag.IntVar(&port, "port", 443, "Port for the webhook server")
 	flag.Parse()
-
 }
 
 // Main entrypoint to the server.
@@ -115,6 +118,5 @@ func main() {
 	http.HandleFunc("/readyz", func(w http.ResponseWriter, req *http.Request) { w.Write([]byte("ok")) })
 	logger.Printf("Server started on port %d ...\n", port)
 	logger.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%d", port), tlsCert, tlsKey, nil))
-	//logger.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 
 }
