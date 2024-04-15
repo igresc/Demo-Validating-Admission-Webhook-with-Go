@@ -28,7 +28,7 @@ tasks:
       - sed -e 's@${ENCODED_CA}@'"{{.ENCODED_CA}}"'@g' < k8s/validatingWebhook.yaml | kubectl create -f -
 
   k8s-up:
-    desc: build the image and runs k8s-cleanup and k8s-deploy
+    desc: build and push the image and runs k8s-cleanup and k8s-deploy
     deps: [docker-build]
     cmds:
       - task: k8s-cleanup
@@ -45,4 +45,4 @@ tasks:
   demo:
     desc: initiates all the windows to demostrate how the webhook works
     cmds:
-      - tmux new-session "k9s" \; split-window -h "k9s -c pod"
+      - tmux new-session "bash" \; split-window "k9s -c deployments" \; split-window -h "k9s -c pod"
